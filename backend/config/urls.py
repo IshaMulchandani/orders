@@ -21,7 +21,7 @@ urlpatterns = [
     path("api/", include("apps.users.urls")),  # /api/auth/*, /api/invitations/*
     path("api/clients/", include("apps.clients.urls")),
     path("api/products/", include("apps.products.urls")),
+    path("api/orders/", include("apps.orders.urls")),
     # Remaining domain app routes are wired in as each is built out:
-    # path("api/orders/", include("apps.orders.urls")),
     # path("api/notifications/", include("apps.notifications.urls")),
 ]

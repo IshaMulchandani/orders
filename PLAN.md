@@ -20,6 +20,8 @@
 | Delete master data | Partner-only, confirm modal, HARD delete. Order lines snapshot the client/product name at creation so history stays readable. |
 | PWA | Yes — installable, offline app-shell, data still requires network. |
 | Hosting | Supabase (Postgres + Auth optional) + Render/Railway (Django backend) + Vercel (React frontend). All free-tier. |
+| Order line price | No default price (Phase 2 decision) — must be ≥ ₹0.01, always typed manually. |
+| Team order visibility | Current queue **plus** any order the user has personally acted on (via the audit trail), even after it moves to another team (Phase 3 decision — Partners still see everything). |
 
 ## 2. System architecture
 

@@ -5,10 +5,12 @@ import AdminClients from "./pages/admin/Clients";
 import AdminProducts from "./pages/admin/Products";
 import AdminUsers from "./pages/admin/Users";
 import Login from "./pages/Login";
+import OrderDetail from "./pages/OrderDetail";
+import OrderNew from "./pages/OrderNew";
 import Orders from "./pages/Orders";
 
 // New pages are added as their own <Route> line — nest under the
-// second <ProtectedRoute allowedRoles={...}> block for role-restricted
+// relevant <ProtectedRoute allowedRoles={...}> block for role-restricted
 // pages, or directly under <AppShell> for anything any signed-in user
 // can see. Nothing else in this file needs to change.
 export default function App() {
@@ -19,6 +21,11 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/:id" element={<OrderDetail />} />
+
+          <Route element={<ProtectedRoute allowedRoles={["PARTNER", "SALESMAN"]} />}>
+            <Route path="/orders/new" element={<OrderNew />} />
+          </Route>
 
           <Route element={<ProtectedRoute allowedRoles={["PARTNER"]} />}>
             <Route path="/admin/users" element={<AdminUsers />} />
