@@ -35,6 +35,11 @@ export interface OrderListItem {
   created_at: string;
 }
 
+export interface OrderAction {
+  to_status: OrderStatus;
+  label: string;
+}
+
 export interface OrderDetail {
   id: number;
   order_no: string;
@@ -47,6 +52,7 @@ export interface OrderDetail {
   events: OrderEvent[];
   total: string;
   can_edit: boolean;
+  available_actions: OrderAction[];
   created_at: string;
   updated_at: string;
 }

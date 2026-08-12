@@ -6,10 +6,17 @@ from rest_framework import serializers
 from apps.products.models import Product
 
 from .models import Order, OrderEvent, OrderLine
-from .services import allocate_order_number
+from .services import allocate_order_number, available_transitions
 
 MAX_LINES = 50
 MIN_LINES = 1
+
+ACTION_LABELS = {
+    "BILL_CREATED": "Mark Bill Created",
+    "SHIPPED": "Mark Shipped",
+    "DONE": "Mark Done",
+    "CANCELLED": "Cancel Order",
+}
 
 
 def _display_name(user):
@@ -67,12 +74,14 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     events = OrderEventSerializer(many=True, read_only=True)
     total = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
+    available_actions = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = [
             "id", "order_no", "client", "client_name", "salesman_name", "status",
-            "billed_by_name", "lines", "events", "total", "can_edit", "created_at", "updated_at",
+            "billed_by_name", "lines", "events", "total", "can_edit", "available_actions",
+            "created_at", "updated_at",
         ]
         read_only_fields = fields
 
@@ -91,6 +100,21 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             return False
         user = request.user
         return user.role == "PARTNER" or obj.salesman_id == user.id
+
+    def get_available_actions(self, obj):
+        """
+        Drives which action buttons the frontend shows — computed from
+        the same validation the transition endpoint itself enforces
+        (apps.orders.services._validate_transition), so the UI can
+        never offer a button the backend would then reject.
+        """
+        request = self.context.get("request")
+        if not request:
+            return []
+        return [
+            {"to_status": s, "label": ACTION_LABELS[s]}
+            for s in available_transitions(obj, request.user)
+        ]
 
 
 # --- Write serializers -------------------------------------------------

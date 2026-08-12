@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiClient } from "@/api/client";
+import Confirm from "@/components/Confirm";
 import OrderForm from "@/components/orders/OrderForm";
 import OrderStatusPill from "@/components/OrderStatusPill";
 import OrderTimeline from "@/components/OrderTimeline";
-import type { DraftOrderLine, OrderDetail as OrderDetailType } from "@/types/order";
+import type { DraftOrderLine, OrderAction, OrderDetail as OrderDetailType } from "@/types/order";
 
 export default function OrderDetail() {
   const { id } = useParams();
@@ -12,6 +13,9 @@ export default function OrderDetail() {
   const [order, setOrder] = useState<OrderDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionPending, setActionPending] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -24,6 +28,28 @@ export default function OrderDetail() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  async function runTransition(to_status: OrderAction["to_status"]) {
+    setActionError(null);
+    setActionPending(true);
+    try {
+      const { data } = await apiClient.post(`/orders/${id}/transition/`, { to_status });
+      setOrder(data);
+    } catch (err: any) {
+      setActionError(err.response?.data?.detail ?? "Could not update this order.");
+    } finally {
+      setActionPending(false);
+      setConfirmCancel(false);
+    }
+  }
+
+  function handleActionClick(action: OrderAction) {
+    if (action.to_status === "CANCELLED") {
+      setConfirmCancel(true);
+      return;
+    }
+    runTransition(action.to_status);
+  }
 
   if (loading || !order) {
     return <p className="p-4 text-sm text-gray-500">Loading…</p>;
@@ -51,6 +77,9 @@ export default function OrderDetail() {
     );
   }
 
+  const nonCancelActions = order.available_actions.filter((a) => a.to_status !== "CANCELLED");
+  const cancelAction = order.available_actions.find((a) => a.to_status === "CANCELLED");
+
   return (
     <div className="mx-auto max-w-3xl p-4">
       <div className="flex items-center justify-between">
@@ -66,14 +95,36 @@ export default function OrderDetail() {
         {order.billed_by_name && ` · Billed by: ${order.billed_by_name}`}
       </div>
 
-      {order.can_edit && (
-        <button
-          onClick={() => setIsEditing(true)}
-          className="mt-3 rounded bg-navy px-4 py-2 text-sm text-white hover:bg-navy-light"
-        >
-          Edit Order
-        </button>
-      )}
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        {order.can_edit && (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="rounded bg-navy px-4 py-2 text-sm text-white hover:bg-navy-light"
+          >
+            Edit Order
+          </button>
+        )}
+        {nonCancelActions.map((action) => (
+          <button
+            key={action.to_status}
+            onClick={() => handleActionClick(action)}
+            disabled={actionPending}
+            className="rounded border border-navy px-4 py-2 text-sm text-navy hover:bg-navy hover:text-white disabled:opacity-50"
+          >
+            {action.label}
+          </button>
+        ))}
+        {cancelAction && (
+          <button
+            onClick={() => handleActionClick(cancelAction)}
+            disabled={actionPending}
+            className="rounded border border-red-600 px-4 py-2 text-sm text-red-600 hover:bg-red-600 hover:text-white disabled:opacity-50"
+          >
+            {cancelAction.label}
+          </button>
+        )}
+      </div>
+      {actionError && <p className="mt-2 text-sm text-red-600">{actionError}</p>}
 
       <div className="mt-6">
         <h2 className="text-sm font-medium text-gray-700">Items</h2>
@@ -112,6 +163,16 @@ export default function OrderDetail() {
       <button onClick={() => navigate("/orders")} className="mt-6 text-sm text-navy-light hover:underline">
         ← Back to Orders
       </button>
+
+      <Confirm
+        open={confirmCancel}
+        title="Cancel Order"
+        message={`Are you sure you want to cancel order ${order.order_no}? This cannot be undone.`}
+        confirmLabel="Cancel Order"
+        danger
+        onConfirm={() => runTransition("CANCELLED")}
+        onCancel={() => setConfirmCancel(false)}
+      />
     </div>
   );
 }

@@ -22,6 +22,8 @@
 | Hosting | Supabase (Postgres + Auth optional) + Render/Railway (Django backend) + Vercel (React frontend). All free-tier. |
 | Order line price | No default price (Phase 2 decision) — must be ≥ ₹0.01, always typed manually. |
 | Team order visibility | Current queue **plus** any order the user has personally acted on (via the audit trail), even after it moves to another team (Phase 3 decision — Partners still see everything). |
+| Partner dashboard tabs | **3 active tabs**: Pending, Bill Created, Payment Pending — no "Shipped" tab, since an order never actually rests in that status (it auto-cascades straight to Payment Pending the instant Packaging marks it shipped). The "Marked shipped" moment is still fully visible in the order's audit timeline (Phase 4 decision, revises the earlier "four tabs" plan). |
+| Available actions | Backend is the single source of truth: `OrderDetailSerializer.available_actions` calls the exact same validation the transition endpoint enforces, so the frontend can never show a button the backend would then reject (Phase 4 design). |
 
 ## 2. System architecture
 
@@ -136,7 +138,7 @@ GET    /api/history           (?kind=done|cancelled|all, ?date_from, ?date_to, ?
 
 **Reusable backend components** (aligns with your project rule 1):
 - `PermissionByRole(*allowed_roles)` — generic DRF permission class parametrised by role list.
-- `StatusTransitionMixin` — shared logic for validating and executing state transitions, used by the order endpoint. Keeps the state machine in one place.
+- ~~`StatusTransitionMixin`~~ — built instead as plain functions in `apps/orders/services.py` (`_validate_transition`, `can_transition`, `available_transitions`, `apply_transition`). Order is the only resource with a state machine right now, so a generic mixin would have been an abstraction with one caller — the functions are just as reusable (any future entry point, e.g. a management command, can call `apply_transition` directly) without guessing at a shape a hypothetical second resource might need (Phase 4 decision).
 - `CsvImportMixin` — one abstract view that both `clients/import` and `products/import` extend; each subclass just declares a serializer and unique-key column.
 - `snapshot_on_create` — a small helper that runs at `Order.save()` to copy client/product names onto the order rows.
 
