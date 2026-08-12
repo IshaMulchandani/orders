@@ -1,16 +1,33 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
+import AppShell from "./components/AppShell";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AdminClients from "./pages/admin/Clients";
+import AdminProducts from "./pages/admin/Products";
+import AdminUsers from "./pages/admin/Users";
 import Login from "./pages/Login";
 import Orders from "./pages/Orders";
 
-// Route list mirrors PLAN.md section 6. Pages beyond Login/Orders
-// (OrderDetail, History, admin/*, notifications) are added phase by
-// phase — this file just needs a new <Route> line each time, nothing
-// else changes, since layout/nav is shared via a future <AppShell>.
+// New pages are added as their own <Route> line — nest under the
+// second <ProtectedRoute allowedRoles={...}> block for role-restricted
+// pages, or directly under <AppShell> for anything any signed-in user
+// can see. Nothing else in this file needs to change.
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/orders" element={<Orders />} />
+
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppShell />}>
+          <Route path="/orders" element={<Orders />} />
+
+          <Route element={<ProtectedRoute allowedRoles={["PARTNER"]} />}>
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/clients" element={<AdminClients />} />
+            <Route path="/admin/products" element={<AdminProducts />} />
+          </Route>
+        </Route>
+      </Route>
+
       <Route path="/" element={<Navigate to="/orders" replace />} />
     </Routes>
   );

@@ -18,10 +18,10 @@ def health_check(request):
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/health/", health_check),
-    # Domain app routes are wired in as each is built out:
-    # path("api/auth/", include("apps.users.urls")),
-    # path("api/clients/", include("apps.clients.urls")),
-    # path("api/products/", include("apps.products.urls")),
+    path("api/", include("apps.users.urls")),  # /api/auth/*, /api/invitations/*
+    path("api/clients/", include("apps.clients.urls")),
+    path("api/products/", include("apps.products.urls")),
+    # Remaining domain app routes are wired in as each is built out:
     # path("api/orders/", include("apps.orders.urls")),
     # path("api/notifications/", include("apps.notifications.urls")),
 ]

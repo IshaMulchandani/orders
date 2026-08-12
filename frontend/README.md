@@ -5,8 +5,9 @@ React + Vite + TypeScript + Tailwind PWA. See root `PLAN.md` for the full archit
 ## Local setup
 
 1. Install dependencies: `npm install`
-2. Copy `.env.example` to `.env` and fill in values.
+2. Copy `.env.example` to `.env` and fill in values, including `VITE_GOOGLE_CLIENT_ID` (same Client ID as the backend's `GOOGLE_OAUTH_CLIENT_ID`).
 3. Start the dev server: `npm run dev` → `http://localhost:5173`
+4. Sign in with Google using the email you passed to `bootstrap_partner` on the backend.
 
 ## Project layout
 

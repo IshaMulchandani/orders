@@ -5,6 +5,7 @@ Kept intentionally simple: one settings module driven entirely by
 environment variables (via django-environ), so the same codebase runs
 locally, in CI, and on Render without branching settings files.
 """
+from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
@@ -36,6 +37,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
 ]
 
@@ -129,6 +131,12 @@ STORAGES = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --------------------------------------------------------------------------
+# Custom user model — auth is Google OAuth only, no usernames/passwords
+# for regular users. Must be set before the first migration runs.
+# --------------------------------------------------------------------------
+AUTH_USER_MODEL = "users.User"
+
+# --------------------------------------------------------------------------
 # DRF / JWT
 # --------------------------------------------------------------------------
 REST_FRAMEWORK = {
@@ -142,12 +150,29 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 25,
 }
 
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=14),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
 # --------------------------------------------------------------------------
 # CORS — the React frontend origin(s)
 # --------------------------------------------------------------------------
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localhost:5173"])
 
 # --------------------------------------------------------------------------
-# Google OAuth (verified server-side against Invitation table in Phase 1)
+# Google OAuth — the same Client ID is used by the frontend (to render
+# the sign-in button) and here (to verify the id_token's audience).
 # --------------------------------------------------------------------------
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
+
+# Base URL of the deployed frontend — used to build the invite link
+# shown to Partners in the admin/users page.
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")
+
+# First-Partner bootstrap (see apps/users/management/commands/bootstrap_partner.py)
+BOOTSTRAP_PARTNER_EMAIL = env("BOOTSTRAP_PARTNER_EMAIL", default="")
+BOOTSTRAP_PARTNER_NAME = env("BOOTSTRAP_PARTNER_NAME", default="")

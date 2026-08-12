@@ -5,8 +5,8 @@
 | Area | Decision |
 |---|---|
 | Auth | Google OAuth. Partners invite users by email; role pre-assigned to the invite. |
-| Master data (Clients, Products) | CSV bulk import + in-app admin UI. Partner-only can add/edit/delete. |
-| Product price | Master stores default; salesman can override per order line. |
+| Master data (Clients, Products) | CSV bulk import + in-app admin UI. Partner-only can add/edit/delete. **Name-only** — no code/SKU/notes/price fields, by design (Phase 2 decision). |
+| Product price | **No default price on the Product model.** Always typed manually on every order line (Phase 2 decision, revises the earlier "default + override" plan). |
 | Order number | Yearly prefix, e.g. `2026-00001`, resets Jan 1. |
 | Currency / units | INR, price 2 decimals, quantity integer. |
 | Order edit | Only while status = `Pending`. Salesman-creator or any Partner. |
@@ -38,8 +38,8 @@
 ```
 User               (email, name, role[Partner|Salesman|Accountant|Packaging], is_active, created_at)
 Invitation         (email, role, invited_by→User, token, expires_at, accepted_at)
-Client             (name, code, is_active, notes, created_by, created_at)   # hard-deletable
-Product            (name, sku, default_price, is_active, created_by, created_at)  # hard-deletable
+Client             (name, created_by, created_at)   # name-only, hard-deletable
+Product            (name, created_by, created_at)   # name-only, hard-deletable, no price field
 Order              (order_no, client→Client(SET_NULL), client_name_snapshot,
                     salesman→User(PROTECT), status[Pending|BillCreated|Shipped|PaymentPending|Done|Cancelled],
                     year, seq, created_at, updated_at)
@@ -239,46 +239,30 @@ e. **Timezone**: `TIME_ZONE = "Asia/Kolkata"` in Django settings. Yearly order-n
 
 f. **CSV format**: Draft below in section 10, subject to your feedback before the importer is built.
 
-## 10. Draft CSV column formats (for your review — nothing built yet)
+## 10. CSV column formats (final — built in Phase 2)
+
+Both simplified to a single required column after review.
 
 **clients.csv**
-
-| column | required | type | notes |
-|---|---|---|---|
-| name | yes | text | Client display name shown in the dropdown. Must be unique. |
-| code | no | text | Short internal code (e.g. `ACME01`). Must be unique if provided. Useful for quick search. |
-| notes | no | text | Free-form notes (address, contact person, anything). |
-
-Sample:
 ```
-name,code,notes
-ACME Corp,ACME01,"Delhi office, contact: Raj"
-Beta Industries,BETA02,
-Gamma Traders,,
+name
+ACME Corp
+Beta Industries
+Gamma Traders
 ```
 
 **products.csv**
-
-| column | required | type | notes |
-|---|---|---|---|
-| name | yes | text | Product display name shown in the dropdown. Must be unique. |
-| sku | no | text | Internal SKU code. Must be unique if provided. |
-| default_price | yes | decimal (2 dp) | INR. Salesman can override per order line. |
-
-Sample:
 ```
-name,sku,default_price
-Widget X,WX-100,49.50
-Bolt 8mm,BLT-8,2.00
-Custom Gadget,,1250.00
+name
+Widget X
+Bolt 8mm
+Custom Gadget
 ```
 
-**Import behaviour** (planned):
-- Upload → app validates all rows, shows a preview with errors highlighted, no changes yet.
-- User confirms → app upserts (insert new, update existing matched on `name` or `code`/`sku`).
-- Bad rows are skipped and reported back; good rows still commit.
-
-Isha — please add/remove/rename any columns you want. I'll rebuild the tables and the sample files from your notes before we touch code.
+**Import behaviour** (as built):
+- One-step: every valid row is committed immediately on upload.
+- A row is skipped (not imported) if: the name is blank, it duplicates another row in the same file, or it already exists in the database. Skipped rows are reported back with a reason, e.g. "Row 14: Already exists" — the rest of the file still imports.
+- Matching for duplicates is case-insensitive.
 
 ## 11. Waiting on your go-ahead
 
