@@ -24,6 +24,8 @@
 | Team order visibility | Current queue **plus** any order the user has personally acted on (via the audit trail), even after it moves to another team (Phase 3 decision — Partners still see everything). |
 | Partner dashboard tabs | **3 active tabs**: Pending, Bill Created, Payment Pending — no "Shipped" tab, since an order never actually rests in that status (it auto-cascades straight to Payment Pending the instant Packaging marks it shipped). The "Marked shipped" moment is still fully visible in the order's audit timeline (Phase 4 decision, revises the earlier "four tabs" plan). |
 | Available actions | Backend is the single source of truth: `OrderDetailSerializer.available_actions` calls the exact same validation the transition endpoint enforces, so the frontend can never show a button the backend would then reject (Phase 4 design). |
+| Notifications (Phase 5) | In-app only, 30s polling (no websockets in v1). Fires on: order created → Accountants; Bill Created → Packaging; Shipped (auto-cascade to Payment Pending) → Accountants; Done → Partners; Cancelled → Partners. The acting user is never notified about their own action. Clicking a Done/Cancelled notification routes to `/history`; anything else routes to the order detail page. |
+| History page | Partner-only, `/history` — Done + Cancelled orders, filterable by kind/date range/client-name search (`order_no` isn't filterable server-side since it's a computed year+seq property, not a DB column). |
 
 ## 2. System architecture
 
@@ -165,7 +167,9 @@ GET    /api/history           (?kind=done|cancelled|all, ?date_from, ?date_to, ?
 - `Confirm` — modal used for cancel + hard-delete confirmations.
 - `useAuth`, `useRole`, `useNotifications` — hooks that expose current user, gated render helpers, and a live unread count (poll every 30 s in v1; can swap to websocket later).
 
-**UI style**: navy-blue accents (`#0B2447` primary, `#19376D` secondary, `#A5D7E8` accent), Tailwind, minimal chrome, mobile-first. Bottom nav on mobile, sidebar on desktop.
+**UI style**: navy-blue accents (`#0B2447` primary, `#19376D` secondary, `#A5D7E8` accent), Tailwind, minimal chrome, mobile-first.
+
+**Responsive layout** (revised after a mobile pass): header collapses to hamburger + brand + notification bell below the `sm` breakpoint, opening a full-height slide-in drawer (`MobileNavDrawer`) with all nav links, user info, and logout — large tap targets, one shared `navItemsForRole()` config so desktop and mobile nav can't drift apart. Desktop (`sm`+) keeps the original horizontal nav in the header, unchanged. List pages (Orders, History) render as cards below `sm` and as a table at `sm`+; admin lists (Clients/Products/Users) use a single flex-row layout that works at every size instead of a table. The order form's line items keep the product picker full-width with qty/price/total/remove sharing one compact row, so scrolling through many items on a phone doesn't take five screens' worth of stacked fields.
 
 **PWA**: `vite-plugin-pwa` gives us the service worker; we cache the app shell (HTML/CSS/JS/fonts/icons) with `cache-first`, and API requests use `network-only` (or `network-first` with a friendly offline banner). Manifest ships app icons for iOS/Android home-screen install.
 

@@ -9,6 +9,8 @@ from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
 
+from apps.orders.views import OrderHistoryView
+
 
 def health_check(request):
     """Simple liveness endpoint for Render/uptime checks."""
@@ -22,6 +24,6 @@ urlpatterns = [
     path("api/clients/", include("apps.clients.urls")),
     path("api/products/", include("apps.products.urls")),
     path("api/orders/", include("apps.orders.urls")),
-    # Remaining domain app routes are wired in as each is built out:
-    # path("api/notifications/", include("apps.notifications.urls")),
+    path("api/notifications/", include("apps.notifications.urls")),
+    path("api/history/", OrderHistoryView.as_view()),
 ]

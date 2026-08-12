@@ -183,55 +183,51 @@ export default function MasterDataManager({
         {loading ? (
           <p className="text-sm text-gray-500">Loading…</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id} className="border-b border-gray-100">
-                  <td className="py-2">
-                    {editingId === item.id ? (
-                      <input
-                        autoFocus
-                        value={editingName}
-                        onChange={(e) => setEditingName(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && saveEdit(item.id)}
-                        className="w-full rounded border border-gray-300 px-2 py-1"
-                      />
-                    ) : (
-                      item.name
-                    )}
-                  </td>
-                  <td className="w-40 py-2 text-right">
-                    {editingId === item.id ? (
-                      <div className="flex justify-end gap-3">
-                        <button onClick={() => saveEdit(item.id)} className="text-navy-light hover:underline">
-                          Save
-                        </button>
-                        <button onClick={() => setEditingId(null)} className="text-gray-500 hover:underline">
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex justify-end gap-3">
-                        <button onClick={() => startEdit(item)} className="text-navy-light hover:underline">
-                          Edit
-                        </button>
-                        <button onClick={() => setDeleteTarget(item)} className="text-red-600 hover:underline">
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {items.length === 0 && (
-                <tr>
-                  <td colSpan={2} className="py-4 text-center text-gray-400">
-                    No {resourceLabelPlural.toLowerCase()} yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <div className="divide-y divide-gray-100 rounded border border-gray-200">
+            {items.map((item) => (
+              <div key={item.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                <div className="min-w-0 flex-1">
+                  {editingId === item.id ? (
+                    <input
+                      autoFocus
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && saveEdit(item.id)}
+                      className="w-full rounded border border-gray-300 px-2 py-1"
+                    />
+                  ) : (
+                    <span className="block truncate">{item.name}</span>
+                  )}
+                </div>
+                <div className="flex shrink-0 gap-3">
+                  {editingId === item.id ? (
+                    <>
+                      <button onClick={() => saveEdit(item.id)} className="text-navy-light hover:underline">
+                        Save
+                      </button>
+                      <button onClick={() => setEditingId(null)} className="text-gray-500 hover:underline">
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => startEdit(item)} className="text-navy-light hover:underline">
+                        Edit
+                      </button>
+                      <button onClick={() => setDeleteTarget(item)} className="text-red-600 hover:underline">
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+            {items.length === 0 && (
+              <p className="px-3 py-4 text-center text-gray-400">
+                No {resourceLabelPlural.toLowerCase()} yet.
+              </p>
+            )}
+          </div>
         )}
       </div>
 

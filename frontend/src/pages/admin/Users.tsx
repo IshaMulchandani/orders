@@ -121,44 +121,31 @@ export default function AdminUsers() {
         {loading ? (
           <p className="text-sm text-gray-500">Loading…</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 text-gray-500">
-                <th className="py-2">Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {invitations.map((inv) => (
-                <tr key={inv.id} className="border-b border-gray-100">
-                  <td className="py-2">{inv.email}</td>
-                  <td>{inv.role}</td>
-                  <td className="capitalize">{inv.status}</td>
-                  <td className="py-2 text-right">
-                    {inv.status === "pending" && (
-                      <div className="flex justify-end gap-3">
-                        <button onClick={() => copyMessage(inv)} className="text-navy-light hover:underline">
-                          {copiedId === inv.id ? "Copied!" : "Copy link"}
-                        </button>
-                        <button onClick={() => handleRevoke(inv.id)} className="text-red-600 hover:underline">
-                          Revoke
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {invitations.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-4 text-center text-gray-400">
-                    No invitations yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <div className="divide-y divide-gray-100 rounded border border-gray-200">
+            {invitations.map((inv) => (
+              <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-navy">{inv.email}</p>
+                  <p className="text-xs text-gray-500">
+                    {inv.role} · <span className="capitalize">{inv.status}</span>
+                  </p>
+                </div>
+                {inv.status === "pending" && (
+                  <div className="flex shrink-0 gap-3">
+                    <button onClick={() => copyMessage(inv)} className="text-navy-light hover:underline">
+                      {copiedId === inv.id ? "Copied!" : "Copy link"}
+                    </button>
+                    <button onClick={() => handleRevoke(inv.id)} className="text-red-600 hover:underline">
+                      Revoke
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {invitations.length === 0 && (
+              <p className="px-3 py-4 text-center text-gray-400">No invitations yet.</p>
+            )}
+          </div>
         )}
       </div>
     </div>

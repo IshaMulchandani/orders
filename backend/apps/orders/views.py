@@ -1,18 +1,16 @@
 """
-Order endpoints: create/list/retrieve/update of orders, plus the
-status transition action that drives the whole workflow (Pending ->
-Bill Created -> Shipped -> Payment Pending -> Done, and Cancel).
+Order endpoints: create/list/retrieve/update of orders, the status
+transition action that drives the whole workflow (Pending -> Bill
+Created -> Shipped -> Payment Pending -> Done, and Cancel), and the
+Partner-only history view (Done + Cancelled).
 """
-from decimal import Decimal
-
-from django.db.models import DecimalField, F, Sum, Value
-from django.db.models.functions import Coalesce
-from rest_framework import permissions, status, viewsets
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.common.permissions import HasRole
 
+from .models import Order
 from .permissions import IsOrderEditableByRequester
 from .serializers import (
     OrderCreateSerializer,
@@ -20,7 +18,7 @@ from .serializers import (
     OrderListSerializer,
     OrderUpdateSerializer,
 )
-from .services import TransitionError, apply_transition, orders_visible_to
+from .services import TransitionError, apply_transition, orders_visible_to, with_total
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -33,16 +31,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         # Annotated once here (used by OrderListSerializer's plain
         # `total` field); OrderDetailSerializer computes its own total
         # from prefetched lines instead, since it's a single object.
-        qs = qs.annotate(
-            total=Coalesce(
-                Sum(
-                    F("lines__quantity") * F("lines__price"),
-                    output_field=DecimalField(max_digits=14, decimal_places=2),
-                ),
-                Value(Decimal("0.00")),
-                output_field=DecimalField(max_digits=14, decimal_places=2),
-            )
-        )
+        qs = with_total(qs)
         # Optional ?status=PENDING filter — used by the Partner
         # dashboard tabs and the Accountant/Packaging queue views so
         # each can ask for just their slice without extra endpoints.
@@ -108,3 +97,47 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         detail = OrderDetailSerializer(order, context=self.get_serializer_context())
         return Response(detail.data)
+
+
+class OrderHistoryView(generics.ListAPIView):
+    """
+    Partner-only. Chronological Done + Cancelled orders — the
+    click-through target for a Partner's Done/Cancelled notifications,
+    and a general audit view. Filters:
+      ?kind=done|cancelled   (default: both)
+      ?date_from, ?date_to   (YYYY-MM-DD, filtered on created_at)
+      ?q                     (client name, case-insensitive contains)
+    """
+
+    serializer_class = OrderListSerializer
+    permission_classes = [HasRole.for_roles("PARTNER")]
+
+    def get_queryset(self):
+        qs = with_total(
+            Order.objects.filter(status__in=[Order.Status.DONE, Order.Status.CANCELLED]).select_related(
+                "client", "salesman", "billed_by"
+            )
+        )
+
+        params = self.request.query_params
+        kind = params.get("kind")
+        if kind == "done":
+            qs = qs.filter(status=Order.Status.DONE)
+        elif kind == "cancelled":
+            qs = qs.filter(status=Order.Status.CANCELLED)
+
+        date_from = params.get("date_from")
+        if date_from:
+            qs = qs.filter(created_at__date__gte=date_from)
+        date_to = params.get("date_to")
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to)
+
+        q = params.get("q")
+        if q:
+            # order_no is a computed property (year/seq), not a DB
+            # column, so it can't be filtered on directly — client name
+            # covers the common "find this order" search case instead.
+            qs = qs.filter(client_name_snapshot__icontains=q)
+
+        return qs

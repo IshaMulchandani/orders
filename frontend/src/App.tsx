@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AdminClients from "./pages/admin/Clients";
 import AdminProducts from "./pages/admin/Products";
 import AdminUsers from "./pages/admin/Users";
+import History from "./pages/History";
 import Login from "./pages/Login";
 import OrderDetail from "./pages/OrderDetail";
 import OrderNew from "./pages/OrderNew";
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/clients" element={<AdminClients />} />
             <Route path="/admin/products" element={<AdminProducts />} />
+            <Route path="/history" element={<History />} />
           </Route>
         </Route>
       </Route>

@@ -6,7 +6,7 @@ from rest_framework import serializers
 from apps.products.models import Product
 
 from .models import Order, OrderEvent, OrderLine
-from .services import allocate_order_number, available_transitions
+from .services import available_transitions, create_order
 
 MAX_LINES = 50
 MIN_LINES = 1
@@ -142,35 +142,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         lines_data = validated_data.pop("lines")
         client = validated_data["client"]
         request = self.context["request"]
-
-        with transaction.atomic():
-            year, seq = allocate_order_number()
-            order = Order.objects.create(
-                year=year,
-                seq=seq,
-                client=client,
-                client_name_snapshot=client.name,
-                salesman=request.user,
-                status=Order.Status.PENDING,
-            )
-            OrderLine.objects.bulk_create(
-                OrderLine(
-                    order=order,
-                    product=line["product"],
-                    product_name_snapshot=line["product"].name,
-                    quantity=line["quantity"],
-                    price=line["price"],
-                )
-                for line in lines_data
-            )
-            OrderEvent.objects.create(
-                order=order,
-                actor=request.user,
-                kind=OrderEvent.Kind.CREATED,
-                to_status=Order.Status.PENDING,
-                description=f"Order created by {_display_name(request.user)}.",
-            )
-        return order
+        return create_order(client, lines_data, request.user)
 
 
 class OrderUpdateSerializer(serializers.ModelSerializer):

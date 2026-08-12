@@ -118,10 +118,14 @@ export default function OrderForm({
       onSaved(data);
     } catch (err: any) {
       const detail = err.response?.data;
+      // The backend always returns a JSON error object for validation
+      // failures. A non-object body (e.g. an HTML debug page from an
+      // unhandled 500) means something unexpected broke server-side —
+      // show a generic message instead of dumping raw HTML into the UI.
       setError(
-        typeof detail === "string"
-          ? detail
-          : (detail?.lines?.[0] ?? detail?.client?.[0] ?? detail?.detail ?? "Could not save the order."),
+        detail && typeof detail === "object"
+          ? (detail.lines?.[0] ?? detail.client?.[0] ?? detail.detail ?? "Could not save the order.")
+          : "Something went wrong saving the order. Please try again.",
       );
     } finally {
       setSubmitting(false);
@@ -163,49 +167,48 @@ export default function OrderForm({
 
         <div className="mt-2 space-y-3">
           {lines.map((line) => (
-            <div
-              key={line.key}
-              className="flex flex-col gap-2 rounded border border-gray-200 p-3 sm:flex-row sm:items-center"
-            >
-              <div className="flex-1">
-                <SearchableDropdown
-                  value={line.product}
-                  onChange={(product) => updateLine(line.key, { product })}
-                  fetchOptions={fetchProducts}
-                  getLabel={(p) => p.name}
-                  getKey={(p) => p.id}
-                  placeholder="Search products…"
+            <div key={line.key} className="rounded border border-gray-200 p-3">
+              <SearchableDropdown
+                value={line.product}
+                onChange={(product) => updateLine(line.key, { product })}
+                fetchOptions={fetchProducts}
+                getLabel={(p) => p.name}
+                getKey={(p) => p.id}
+                placeholder="Search products…"
+              />
+              {/* Qty/price/total/remove share one row at every screen
+                  size — only the product picker above needs full width. */}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={line.quantity}
+                  onChange={(e) => updateLine(line.key, { quantity: e.target.value })}
+                  placeholder="Qty"
+                  className="w-20 rounded border border-gray-300 px-2 py-2 text-sm"
                 />
+                <input
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  value={line.price}
+                  onChange={(e) => updateLine(line.key, { price: e.target.value })}
+                  placeholder="Price"
+                  className="w-24 rounded border border-gray-300 px-2 py-2 text-sm"
+                />
+                <span className="ml-auto text-sm font-medium text-gray-600">
+                  ₹{lineTotal(line).toFixed(2)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeLine(line.key)}
+                  disabled={lines.length <= 1}
+                  className="shrink-0 text-sm text-red-600 hover:underline disabled:text-gray-300"
+                >
+                  Remove
+                </button>
               </div>
-              <input
-                type="number"
-                min={1}
-                step={1}
-                value={line.quantity}
-                onChange={(e) => updateLine(line.key, { quantity: e.target.value })}
-                placeholder="Qty"
-                className="w-full rounded border border-gray-300 px-3 py-2 sm:w-24"
-              />
-              <input
-                type="number"
-                min={0.01}
-                step={0.01}
-                value={line.price}
-                onChange={(e) => updateLine(line.key, { price: e.target.value })}
-                placeholder="Price"
-                className="w-full rounded border border-gray-300 px-3 py-2 sm:w-28"
-              />
-              <div className="w-full text-right text-sm text-gray-600 sm:w-24">
-                ₹{lineTotal(line).toFixed(2)}
-              </div>
-              <button
-                type="button"
-                onClick={() => removeLine(line.key)}
-                disabled={lines.length <= 1}
-                className="text-sm text-red-600 hover:underline disabled:text-gray-300"
-              >
-                Remove
-              </button>
             </div>
           ))}
         </div>

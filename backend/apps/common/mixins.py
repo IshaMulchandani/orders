@@ -9,7 +9,11 @@ Reusable view building blocks shared across domain apps.
   creation from a single-column CSV. Client and Product both mix this
   in as-is; a future resource with a differently-named unique field
   can override `import_field`.
-- StatusTransitionMixin: order status state machine, added in Phase 4.
+
+Order's status state machine deliberately isn't a mixin here — Order
+is the only resource with one, so apps/orders/services.py just has
+plain functions (_validate_transition, apply_transition, ...). See
+PLAN.md section 6 for why.
 """
 import csv
 import io
@@ -96,6 +100,3 @@ class CsvImportMixin:
                 skipped.append({"row": i, "value": value, "reason": "Database rejected this row."})
 
         return Response({"created_count": len(created), "created": created, "skipped": skipped})
-
-
-# TODO(Phase 4): StatusTransitionMixin — order status state machine.

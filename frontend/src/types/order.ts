@@ -8,7 +8,11 @@ export type OrderStatus =
 
 export interface OrderLine {
   id: number;
-  product: number;
+  // Nullable: if a Partner hard-deletes the product after this line
+  // was created, the FK goes null (see apps.orders.models.OrderLine —
+  // on_delete=SET_NULL) but product_name still shows the snapshotted
+  // name so the line stays readable.
+  product: number | null;
   product_name: string;
   quantity: number;
   price: string;
